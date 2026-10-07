@@ -9,6 +9,11 @@ cd "$(dirname "$0")/.."
 K8S_VERSION="${K8S_VERSION:-1.31.0}"
 CRD_SCHEMAS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
+# Déclare les dépôts des dépendances (requis par `helm dependency build`).
+i=0
+for repo in $(awk '/repository:/ {print $2}' helm/Chart.yaml); do
+  helm repo add "dep-$((i++))" "$repo" --force-update >/dev/null
+done
 helm dependency build helm >/dev/null
 
 run() {
