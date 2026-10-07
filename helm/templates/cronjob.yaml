@@ -1,0 +1,31 @@
+{{- range $name, $spec := .Values.cronJobs }}
+{{- if $spec.enabled }}
+{{- $w := include "tilleuls.workload" (dict "root" $ "spec" $spec) | fromYaml }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) | trunc 52 | trimSuffix "-" }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+  {{- include "tilleuls.annotations" (dict "root" $ "annotations" $w.annotations) | nindent 2 }}
+spec:
+  schedule: {{ $w.schedule | quote }}
+  {{- with $w.timeZone }}
+  timeZone: {{ . }}
+  {{- end }}
+  suspend: {{ $w.suspend | default false }}
+  concurrencyPolicy: {{ $w.concurrencyPolicy | default "Forbid" }}
+  {{- with $w.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ . }}
+  {{- end }}
+  successfulJobsHistoryLimit: {{ $w.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ $w.failedJobsHistoryLimit | default 3 }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "tilleuls.componentSelectorLabels" (dict "root" $ "component" $name) | nindent 8 }}
+    spec:
+      {{- include "tilleuls.jobSpec" (dict "root" $ "name" $name "w" $w) | nindent 6 }}
+{{- end }}
+{{- end }}

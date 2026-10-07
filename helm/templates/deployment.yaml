@@ -1,0 +1,27 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- if $spec.enabled }}
+{{- $w := include "tilleuls.workload" (dict "root" $ "spec" $spec) | fromYaml }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+  {{- include "tilleuls.annotations" (dict "root" $ "annotations" $w.annotations) | nindent 2 }}
+spec:
+  {{- if not (dig "autoscaling" "enabled" false $w) }}
+  replicas: {{ $w.replicaCount | default 1 }}
+  {{- end }}
+  revisionHistoryLimit: {{ $w.revisionHistoryLimit | default 5 }}
+  {{- with $w.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tilleuls.componentSelectorLabels" (dict "root" $ "component" $name) | nindent 6 }}
+  template:
+    {{- include "tilleuls.podTemplate" (dict "root" $ "name" $name "w" $w) | nindent 4 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,27 @@
+# Environnement de production de __APP_NAME__.
+
+env:
+  APP_ENV: prod
+  TRUSTED_HOSTS: '^__APP_NAME__\.example\.com$'
+
+deployments:
+  app:
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+    pdb:
+      enabled: true
+
+httpRoutes:
+  main:
+    enabled: true
+    hostnames: [__APP_NAME__.example.com]
+    httpsRedirect:
+      enabled: true
+
+cnpg:
+  cluster:
+    instances: 2
+    storage:
+      size: 20Gi

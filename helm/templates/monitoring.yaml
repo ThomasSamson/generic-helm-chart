@@ -1,0 +1,22 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- $mon := $spec.monitoring | default dict }}
+{{- if and $spec.enabled $mon.enabled }}
+{{- $isService := eq ($mon.type | default "podMonitor") "serviceMonitor" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: {{ ternary "ServiceMonitor" "PodMonitor" $isService }}
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+    {{- with $mon.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "tilleuls.componentSelectorLabels" (dict "root" $ "component" $name) | nindent 6 }}
+  {{ ternary "endpoints" "podMetricsEndpoints" $isService }}:
+    {{- toYaml $mon.endpoints | nindent 4 }}
+{{- end }}
+{{- end }}

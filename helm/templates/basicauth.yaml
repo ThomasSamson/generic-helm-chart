@@ -1,0 +1,35 @@
+{{- with .Values.basicAuth }}
+{{- if .enabled }}
+{{- if and (not .existingSecret) (not .users) }}
+{{- fail "basicAuth : renseigner basicAuth.existingSecret ou basicAuth.users" }}
+{{- end }}
+{{- if not .existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "tilleuls.basicAuthName" $ }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+type: Opaque
+stringData:
+  users: |
+    {{- range .users }}
+    {{ . }}
+    {{- end }}
+---
+{{- end }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "tilleuls.basicAuthName" $ }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+spec:
+  basicAuth:
+    secret: {{ .existingSecret | default (include "tilleuls.basicAuthName" $) }}
+    removeHeader: {{ .removeHeader }}
+    {{- with .realm }}
+    realm: {{ . | quote }}
+    {{- end }}
+{{- end }}
+{{- end }}

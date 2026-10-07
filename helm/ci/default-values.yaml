@@ -1,0 +1,4 @@
+# Scénario minimal : valeurs par défaut (un seul Deployment `app`).
+image:
+  repository: nginx
+  tag: "1.27"

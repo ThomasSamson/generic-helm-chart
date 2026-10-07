@@ -1,0 +1,467 @@
+# Chart générique Les Tilleuls.
+#
+# Principe : tout est piloté par les values. Un projet ne modifie jamais les
+# templates, il fournit un fichier values (par environnement) qui surcharge
+# ce fichier. Les commentaires `# --` sont lus par helm-docs pour générer le README.
+#
+# Convention de nommage : chaque ressource s'appelle `<fullname>-<clé>`, où
+# `<clé>` est le nom donné dans `deployments`, `cronJobs`, `jobs`, etc.
+#
+# Les chaînes de caractères de `env`, `podAnnotations`, hosts d'ingress, etc.
+# passent par `tpl` : on peut y utiliser `{{ .Release.Name }}`, `{{ include "tilleuls.fullname" . }}`…
+
+# -- Surcharge du nom du chart (utilisé dans les labels et le fullname).
+nameOverride: ""
+# -- Préfixe des ressources (par défaut : nom de la release).
+fullnameOverride: ""
+
+# -- Labels ajoutés à toutes les ressources.
+commonLabels: {}
+# -- Annotations ajoutées à toutes les ressources.
+commonAnnotations: {}
+
+# Image par défaut de tous les workloads (deployments, cronJobs, jobs).
+# Chaque workload peut la surcharger partiellement via sa propre clé `image`.
+image:
+  # -- Dépôt de l'image.
+  repository: nginx
+  # -- Tag de l'image (par défaut : appVersion du chart).
+  tag: ""
+  # -- Digest (sha256:…) ; prioritaire sur le tag s'il est défini.
+  digest: ""
+  # -- Politique de pull.
+  pullPolicy: IfNotPresent
+
+# -- Secrets de pull du registre, ex. `[{name: regcred}]`.
+imagePullSecrets: []
+
+serviceAccount:
+  # -- Crée un ServiceAccount dédié.
+  create: true
+  # -- Nom du ServiceAccount (par défaut : fullname).
+  name: ""
+  # -- Monte le token du ServiceAccount dans les pods.
+  automount: false
+  # -- Annotations du ServiceAccount (ex. workload identity).
+  annotations: {}
+
+rbac:
+  # -- Crée un Role + RoleBinding pour le ServiceAccount.
+  create: false
+  # -- Règles du Role.
+  rules: []
+  #  - apiGroups: [""]
+  #    resources: ["configmaps"]
+  #    verbs: ["get", "list"]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Configuration partagée par tous les workloads
+# ──────────────────────────────────────────────────────────────────────────────
+
+# -- Variables d'environnement communes, sous forme de map (fusionnable entre fichiers values).
+# Une valeur chaîne passe par `tpl` ; une valeur map est utilisée telle quelle
+# (ex. `{valueFrom: {secretKeyRef: …}}`). Mettre `null` pour supprimer une clé héritée.
+# Les clés sont triées : pour les références `$(VAR)`, utiliser `extraEnv`.
+env: {}
+#  APP_ENV: prod
+#  TRUSTED_HOSTS: '^{{ .Release.Name }}\.example\.com$'
+#  APP_SECRET:
+#    valueFrom:
+#      secretKeyRef: {name: my-secret, key: APP_SECRET}
+
+# -- Variables d'environnement communes au format Kubernetes (liste ordonnée).
+extraEnv: []
+
+# -- Sources `envFrom` communes, au format Kubernetes.
+envFrom: []
+
+# -- Variables sensibles : crée un Secret `<fullname>-env` injecté via `envFrom` dans tous les workloads.
+# À réserver aux environnements de dev/CI : en production, préférer `existingSecrets`
+# (secrets créés par External Secrets, SOPS, Vault…).
+secretEnv: {}
+#  APP_SECRET: changeme
+
+# -- Noms de Secrets existants injectés via `envFrom` dans tous les workloads.
+existingSecrets: []
+
+# -- Fichiers de configuration : crée un ConfigMap `<fullname>-files` et monte
+# chaque fichier (via subPath) dans les workloads listés (`workloads: []` = tous).
+configFiles: {}
+#  php-ini:
+#    mountPath: /usr/local/etc/php/conf.d/zz-app.ini
+#    workloads: [app, worker]
+#    content: |
+#      memory_limit = 512M
+
+# -- Volumes persistants : crée un PVC `<fullname>-<clé>` et le monte dans les workloads listés (`workloads: []` = tous).
+persistence: {}
+#  uploads:
+#    enabled: true
+#    size: 5Gi
+#    accessModes: [ReadWriteMany]
+#    storageClass: ""
+#    existingClaim: ""
+#    mountPath: /app/public/uploads
+#    subPath: ""
+#    workloads: [app]
+#    annotations:
+#      helm.sh/resource-policy: keep
+
+# -- Valeurs par défaut appliquées à chaque workload (deployments, cronJobs, jobs).
+# Une clé de premier niveau définie dans un workload REMPLACE entièrement celle-ci
+# (pas de fusion profonde : le comportement reste prévisible).
+defaults:
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  #  runAsNonRoot: true
+  #  runAsUser: 1000
+  #  fsGroup: 1000
+  #  seccompProfile:
+  #    type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  resources: {}
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  limits:
+  #    memory: 256Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  priorityClassName: ""
+  terminationGracePeriodSeconds: 30
+  # Conteneurs d'init et sidecars, au format Kubernetes (passent par `tpl`).
+  initContainers: []
+  sidecars: []
+  # Volumes et montages supplémentaires, au format Kubernetes.
+  volumes: []
+  volumeMounts: []
+  hostAliases: []
+  dnsConfig: {}
+  lifecycle: {}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Workloads
+# ──────────────────────────────────────────────────────────────────────────────
+
+# -- Deployments, indexés par nom. Chacun accepte toutes les clés de `defaults`, plus :
+# `enabled`, `replicaCount`, `image`, `command`, `args`, `workingDir`, `ports`,
+# `env`, `extraEnv`, `envFrom`, `livenessProbe`, `readinessProbe`, `startupProbe`,
+# `strategy`, `revisionHistoryLimit`, `service`, `autoscaling`, `pdb`, `monitoring`.
+deployments:
+  app:
+    enabled: true
+    replicaCount: 1
+    # Surcharge partielle de l'image globale (ex. image PWA différente).
+    image: {}
+    command: []
+    args: []
+    ports:
+      - name: http
+        containerPort: 80
+        protocol: TCP
+    env: {}
+    extraEnv: []
+    envFrom: []
+    livenessProbe: {}
+    #  httpGet:
+    #    path: /healthz
+    #    port: http
+    readinessProbe: {}
+    startupProbe: {}
+    strategy: {}
+    #  type: RollingUpdate
+    #  rollingUpdate: {maxSurge: 25%, maxUnavailable: 0}
+    service:
+      enabled: true
+      type: ClusterIP
+      annotations: {}
+      # Ports exposés ; par défaut, un port par entrée de `ports` (port = containerPort).
+      ports: []
+      #  - name: http
+      #    port: 80
+      #    targetPort: http
+    autoscaling:
+      enabled: false
+      # `hpa` (HorizontalPodAutoscaler) ou `keda` (ScaledObject, KEDA requis).
+      type: hpa
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+      targetMemoryUtilizationPercentage: ""
+      # HPA : métriques supplémentaires et comportement, au format Kubernetes.
+      metrics: []
+      behavior: {}
+      # KEDA : triggers supplémentaires (prometheus, redis, rabbitmq…), au format KEDA.
+      pollingInterval: 30
+      cooldownPeriod: 300
+      triggers: []
+    pdb:
+      enabled: false
+      minAvailable: 1
+      maxUnavailable: ""
+    # PodMonitor / ServiceMonitor (Prometheus Operator requis).
+    monitoring:
+      enabled: false
+      # `podMonitor` ou `serviceMonitor`.
+      type: podMonitor
+      labels: {}
+      endpoints:
+        - port: http
+          path: /metrics
+          interval: 30s
+
+  worker:
+    enabled: false
+    replicaCount: 1
+    command: []
+    #  - php
+    #  - bin/console
+    #  - messenger:consume
+    #  - async
+    #  - --time-limit=3600
+    #  - --memory-limit=256M
+    ports: []
+    service:
+      enabled: false
+    # Laisse le message en cours se terminer au SIGTERM.
+    terminationGracePeriodSeconds: 120
+    livenessProbe: {}
+
+# -- CronJobs, indexés par nom. Acceptent les clés de `defaults`, plus :
+# `enabled`, `schedule`, `timeZone`, `suspend`, `concurrencyPolicy`,
+# `startingDeadlineSeconds`, `successfulJobsHistoryLimit`, `failedJobsHistoryLimit`,
+# `backoffLimit`, `activeDeadlineSeconds`, `ttlSecondsAfterFinished`, `restartPolicy`,
+# `image`, `command`, `args`, `env`, `extraEnv`, `envFrom`.
+cronJobs: {}
+#  cleanup:
+#    enabled: true
+#    schedule: "0 3 * * *"
+#    timeZone: Europe/Paris
+#    command: [php, bin/console, app:cleanup]
+
+# -- Jobs, indexés par nom (migrations, fixtures, commandes ponctuelles).
+# Mêmes clés que les cronJobs (sans planification), plus `helmHook`.
+# Sans hook, le Job est nommé `<fullname>-<clé>-<revision>` pour être relancé à chaque release.
+jobs: {}
+#  migrations:
+#    enabled: true
+#    command: [php, bin/console, doctrine:migrations:migrate, --no-interaction]
+#    helmHook:
+#      enabled: true
+#      # post-install : la base CNPG et les secrets n'existent pas encore en pre-install.
+#      hooks: post-install,pre-upgrade
+#      weight: 0
+#      deletePolicy: before-hook-creation,hook-succeeded
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Exposition
+# ──────────────────────────────────────────────────────────────────────────────
+
+# -- Ingress, indexés par nom (plusieurs ingress possibles : principal, redirections, technique…).
+# Chaque path cible un deployment (`service`) et un port (nom ou numéro).
+ingresses:
+  main:
+    enabled: false
+    className: ""
+    annotations: {}
+    #  cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Mettre à false pour exclure cet ingress du basic auth global.
+    basicAuth: true
+    hosts:
+      - host: app.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            service: app
+            port: http
+    tls: []
+    #  - secretName: app-example-com-tls
+    #    hosts: [app.example.com]
+
+# -- HTTPRoute (Gateway API), indexés par nom.
+httpRoutes:
+  main:
+    enabled: false
+    annotations: {}
+    parentRefs:
+      - name: gateway
+        namespace: infra-gateway
+        sectionName: https
+    hostnames: []
+    #  - app.example.com
+    # Mettre à false pour exclure cette route du basic auth global
+    # (ou `basicAuth: false` sur une règle, ex. webhooks, /healthz).
+    basicAuth: true
+    # Route supplémentaire `<nom>-redirect` qui redirige HTTP → HTTPS.
+    httpsRedirect:
+      enabled: false
+      parentRefs:
+        - name: gateway
+          namespace: infra-gateway
+          sectionName: http
+    # Règles au format Gateway API. Raccourci : `backend: {service: app, port: 80}`
+    # est converti en backendRefs vers le Service du deployment.
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /
+        backend:
+          service: app
+          port: 80
+
+# Protection par mot de passe (équivalent .htaccess/.htpasswd) via un Middleware
+# Traefik `basicAuth`. Appliquée automatiquement à tous les ingresses et httpRoutes
+# activés (sauf `basicAuth: false` sur l'ingress, la route ou la règle).
+basicAuth:
+  # -- Active le basic auth.
+  enabled: false
+  # -- Secret existant contenant la clé `users` au format htpasswd (recommandé en production).
+  existingSecret: ""
+  # -- Lignes htpasswd (si pas d'existingSecret) : `htpasswd -nbB <user> <password>`.
+  users: []
+  #  - "admin:$2y$05$..."
+  # -- Message affiché par le navigateur.
+  realm: ""
+  # -- Retire l'en-tête Authorization avant de transmettre la requête à l'application.
+  removeHeader: true
+
+# -- NetworkPolicy appliquée à tous les pods de la release.
+networkPolicy:
+  enabled: false
+  policyTypes: [Ingress]
+  # Règles au format Kubernetes.
+  ingress: []
+  #  - from:
+  #      - namespaceSelector:
+  #          matchLabels:
+  #            kubernetes.io/metadata.name: infra-traefik
+  egress: []
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Dépendances (sous-charts)
+#
+# Activation : `addons.<nom>.enabled`. Configuration du sous-chart : clé `<nom>:`.
+# `injectEnv` ajoute automatiquement les variables de connexion à tous les workloads.
+# ──────────────────────────────────────────────────────────────────────────────
+
+addons:
+  cnpg:
+    # PostgreSQL via le chart officiel cloudnative-pg/cluster (opérateur CNPG requis).
+    enabled: false
+    # Injecte DATABASE_USER, DATABASE_PASSWORD (secret `<release>-cnpg-app`) et
+    # DATABASE_URL=postgresql://$(DATABASE_USER):$(DATABASE_PASSWORD)@<host>:5432/<db><query>
+    injectEnv:
+      enabled: true
+      name: DATABASE_URL
+      # Chaîne ajoutée à la fin de l'URL, ex. "?serverVersion=17&charset=utf8".
+      query: ""
+      # Nom d'un pooler de `cnpg.poolers` à utiliser comme hôte (vide = service `-rw` du cluster).
+      pooler: ""
+  valkey:
+    enabled: false
+    # Injecte REDIS_URL=redis://<release>-valkey:6379
+    injectEnv:
+      enabled: true
+      name: REDIS_URL
+  mercure:
+    enabled: false
+    # Injecte MERCURE_URL (URL interne du hub) et MERCURE_JWT_SECRET (clé publisher).
+    injectEnv:
+      enabled: true
+      urlName: MERCURE_URL
+      jwtSecretName: MERCURE_JWT_SECRET
+  meilisearch:
+    enabled: false
+    # Injecte MEILISEARCH_URL=http://<release>-meilisearch:7700
+    injectEnv:
+      enabled: true
+      name: MEILISEARCH_URL
+  maildev:
+    enabled: false
+    # Injecte MAILER_DSN=smtp://<release>-maildev:1025
+    injectEnv:
+      enabled: true
+      name: MAILER_DSN
+
+# -- Configuration du sous-chart cloudnative-pg/cluster
+# (https://github.com/cloudnative-pg/charts/tree/main/charts/cluster).
+# Le cluster s'appelle `<release>-cnpg`.
+cnpg:
+  cluster:
+    instances: 1
+    storage:
+      size: 5Gi
+    initdb:
+      database: app
+      owner: app
+    # Paramètres postgresql.conf (au moins un paramètre : sinon le sous-chart rend un bloc vide).
+    postgresql:
+      parameters:
+        max_connections: "100"
+    monitoring:
+      enabled: false
+    # Requis pour les sauvegardes par plugin (voir `backups` ci-dessous).
+    plugins: []
+    #  - name: barman-cloud.cloudnative-pg.io
+    #    isWALArchiver: true
+    #    parameters:
+    #      barmanObjectName: "{{ .Release.Name }}-cnpg-backups"
+  # Sauvegardes Barman Cloud via le plugin (CNPG ≥ 1.26 + plugin barman-cloud installé).
+  backups:
+    enabled: false
+    method: plugin
+    pluginConfiguration:
+      name: barman-cloud.cloudnative-pg.io
+    # ObjectStore en hook Helm : mettre false avec ArgoCD.
+    objectStore:
+      helmHook: true
+    provider: s3
+    endpointURL: ""
+    destinationPath: ""
+    # s3://bucket/path/
+    secret:
+      # false = utiliser un secret existant (clés ACCESS_KEY_ID / ACCESS_SECRET_KEY).
+      create: false
+      name: cnpg-backup-credentials
+    # boto3 ≥ 1.36 : compatibilité GCS/Scaleway.
+    instanceSidecarConfiguration:
+      env:
+        - name: AWS_REQUEST_CHECKSUM_CALCULATION
+          value: when_required
+    scheduledBackups:
+      - name: daily-backup
+        schedule: "0 0 2 * * *"
+        backupOwnerReference: self
+        method: plugin
+        pluginConfiguration:
+          name: barman-cloud.cloudnative-pg.io
+    retentionPolicy: 30d
+  # Poolers PgBouncer, nommés `<release>-cnpg-pooler-<name>`.
+  poolers: []
+  #  - name: rw
+  #    type: rw
+  #    poolMode: transaction
+  #    instances: 1
+
+# -- Configuration du sous-chart valkey (https://github.com/valkey-io/valkey-helm).
+valkey: {}
+
+# -- Configuration du sous-chart mercure (https://github.com/dunglas/mercure/tree/main/charts/mercure).
+mercure: {}
+
+# -- Configuration du sous-chart meilisearch (https://github.com/meilisearch/meilisearch-kubernetes).
+meilisearch: {}
+
+# -- Configuration du sous-chart maildev (https://github.com/pando85/helm-maildev).
+maildev: {}
+
+# -- Manifestes supplémentaires (passent par `tpl`) : Middleware Traefik, ExternalSecret,
+# Certificate… tout ce que le chart ne couvre pas, sans toucher aux templates.
+extraObjects: []

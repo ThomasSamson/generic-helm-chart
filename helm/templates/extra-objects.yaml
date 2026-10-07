@@ -1,0 +1,4 @@
+{{- range .Values.extraObjects }}
+---
+{{ include "tilleuls.render" (dict "value" . "root" $) }}
+{{- end }}

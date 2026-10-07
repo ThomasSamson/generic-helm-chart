@@ -1,0 +1,19 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- if and $spec.enabled (dig "service" "enabled" false $spec) }}
+{{- $w := include "tilleuls.workload" (dict "root" $ "spec" $spec) | fromYaml }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+  {{- include "tilleuls.annotations" (dict "root" $ "annotations" $w.service.annotations) | nindent 2 }}
+spec:
+  type: {{ $w.service.type | default "ClusterIP" }}
+  ports:
+    {{- include "tilleuls.servicePorts" (dict "w" $w) | nindent 4 }}
+  selector:
+    {{- include "tilleuls.componentSelectorLabels" (dict "root" $ "component" $name) | nindent 4 }}
+{{- end }}
+{{- end }}

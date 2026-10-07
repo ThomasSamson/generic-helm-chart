@@ -1,0 +1,20 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- if and $spec.enabled (dig "pdb" "enabled" false $spec) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+spec:
+  {{- if $spec.pdb.maxUnavailable }}
+  maxUnavailable: {{ $spec.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ $spec.pdb.minAvailable | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tilleuls.componentSelectorLabels" (dict "root" $ "component" $name) | nindent 6 }}
+{{- end }}
+{{- end }}

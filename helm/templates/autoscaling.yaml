@@ -1,0 +1,83 @@
+{{- range $name, $spec := .Values.deployments }}
+{{- $as := $spec.autoscaling | default dict }}
+{{- if and $spec.enabled $as.enabled }}
+{{- $target := include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+{{- if eq ($as.type | default "hpa") "keda" }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $target }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ $target }}
+  minReplicaCount: {{ $as.minReplicas | default 1 }}
+  maxReplicaCount: {{ $as.maxReplicas | default 5 }}
+  pollingInterval: {{ $as.pollingInterval | default 30 }}
+  cooldownPeriod: {{ $as.cooldownPeriod | default 300 }}
+  {{- with $as.behavior }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
+  triggers:
+    {{- with $as.targetCPUUtilizationPercentage }}
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: {{ . | quote }}
+    {{- end }}
+    {{- with $as.targetMemoryUtilizationPercentage }}
+    - type: memory
+      metricType: Utilization
+      metadata:
+        value: {{ . | quote }}
+    {{- end }}
+    {{- with $as.triggers }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+    {{- end }}
+{{- else }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $target }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $target }}
+  minReplicas: {{ $as.minReplicas | default 1 }}
+  maxReplicas: {{ $as.maxReplicas | default 5 }}
+  metrics:
+    {{- with $as.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ . }}
+    {{- end }}
+    {{- with $as.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ . }}
+    {{- end }}
+    {{- with $as.metrics }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $as.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

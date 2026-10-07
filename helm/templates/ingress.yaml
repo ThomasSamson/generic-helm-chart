@@ -1,0 +1,46 @@
+{{- range $key, $ing := .Values.ingresses }}
+{{- if $ing.enabled }}
+{{- $annotations := deepCopy ($ing.annotations | default dict) }}
+{{- if and $.Values.basicAuth.enabled (ne $ing.basicAuth false) }}
+{{- $mw := printf "%s-%s@kubernetescrd" $.Release.Namespace (include "tilleuls.basicAuthName" $) }}
+{{- $existing := get $annotations "traefik.ingress.kubernetes.io/router.middlewares" }}
+{{- $_ := set $annotations "traefik.ingress.kubernetes.io/router.middlewares" (ternary (printf "%s,%s" $mw $existing) $mw (not (empty $existing))) }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $key) }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+  {{- include "tilleuls.annotations" (dict "root" $ "annotations" $annotations) | nindent 2 }}
+spec:
+  {{- with $ing.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $ing.tls }}
+  tls:
+    {{- tpl (toYaml .) $ | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $ing.hosts }}
+    - host: {{ tpl .host $ | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" (.service | default "app")) }}
+                port:
+                  {{- $port := .port | default "http" }}
+                  {{- if kindIs "string" $port }}
+                  name: {{ $port }}
+                  {{- else }}
+                  number: {{ $port }}
+                  {{- end }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

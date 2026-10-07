@@ -1,0 +1,219 @@
+# Scénario complet : toutes les fonctionnalités activées.
+image:
+  repository: registry.example.com/mon-app/api
+  tag: sha-abc123
+imagePullSecrets:
+  - name: regcred
+commonLabels:
+  team: sre
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: [configmaps]
+      verbs: [get]
+env:
+  APP_ENV: prod
+  SERVER_NAME: ":80"
+  TRUSTED_HOSTS: '^{{ .Release.Name }}\.example\.com$'
+  APP_SECRET:
+    valueFrom:
+      secretKeyRef:
+        name: app-secrets
+        key: APP_SECRET
+secretEnv:
+  JWT_PASSPHRASE: test
+existingSecrets:
+  - app-secrets
+configFiles:
+  php-ini:
+    mountPath: /usr/local/etc/php/conf.d/zz-app.ini
+    workloads: [app, worker]
+    content: |
+      memory_limit = 512M
+persistence:
+  uploads:
+    enabled: true
+    size: 5Gi
+    accessModes: [ReadWriteMany]
+    mountPath: /app/public/uploads
+    workloads: [app]
+defaults:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 33
+    fsGroup: 33
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+deployments:
+  app:
+    replicaCount: 2
+    env:
+      APP_ENV: null
+      CADDY_GLOBAL_OPTIONS: admin 0.0.0.0:2019
+    ports:
+      - name: http
+        containerPort: 80
+      - name: admin
+        containerPort: 2019
+    readinessProbe:
+      httpGet:
+        path: /
+        port: http
+    autoscaling:
+      enabled: true
+      type: keda
+      minReplicas: 2
+      maxReplicas: 6
+      triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://prometheus.infra:9090
+            query: sum(frankenphp_busy_workers{namespace="{{ .Release.Namespace }}"})
+            threshold: "5"
+    pdb:
+      enabled: true
+    monitoring:
+      enabled: true
+      endpoints:
+        - port: admin
+          path: /metrics
+  pwa:
+    enabled: true
+    image:
+      repository: registry.example.com/mon-app/pwa
+    ports:
+      - name: http
+        containerPort: 3000
+    service:
+      enabled: true
+      ports:
+        - name: http
+          port: 80
+          targetPort: http
+    autoscaling:
+      enabled: true
+      type: hpa
+      targetMemoryUtilizationPercentage: 80
+  worker:
+    enabled: true
+    replicaCount: 2
+    command: [php, bin/console, messenger:consume, async, --time-limit=3600]
+cronJobs:
+  cleanup:
+    enabled: true
+    schedule: "0 3 * * *"
+    timeZone: Europe/Paris
+    command: [php, bin/console, app:cleanup]
+  disabled-one:
+    enabled: false
+    schedule: "* * * * *"
+jobs:
+  migrations:
+    enabled: true
+    command: [php, bin/console, doctrine:migrations:migrate, --no-interaction]
+    helmHook:
+      enabled: true
+  fixtures:
+    enabled: true
+    command: [php, bin/console, doctrine:fixtures:load, --no-interaction]
+ingresses:
+  main:
+    enabled: true
+    className: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: "{{ .Release.Name }}.example.com"
+        paths:
+          - path: /
+            service: pwa
+          - path: /api
+            service: app
+            port: 80
+    tls:
+      - secretName: app-tls
+        hosts: ["{{ .Release.Name }}.example.com"]
+  technique:
+    enabled: true
+    basicAuth: false
+    hosts:
+      - host: hooks.example.com
+        paths:
+          - path: /webhooks
+            service: app
+httpRoutes:
+  main:
+    enabled: true
+    hostnames: ["{{ .Release.Name }}.example.com"]
+    httpsRedirect:
+      enabled: true
+    rules:
+      - matches:
+          - path: {type: PathPrefix, value: /api}
+        backend: {service: app, port: 80}
+      - matches:
+          - path: {type: PathPrefix, value: /webhooks}
+        basicAuth: false
+        backend: {service: app, port: 80}
+      - matches:
+          - path: {type: PathPrefix, value: /}
+        backend: {service: pwa, port: 80}
+basicAuth:
+  enabled: true
+  realm: Recette
+  users:
+    - "admin:$2y$05$abcdefghijklmnopqrstuuJ6bQ3x8Q4b8jzYc8m1Hq0QWm0n5c2C6"
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: infra-traefik
+addons:
+  cnpg:
+    enabled: true
+    injectEnv:
+      query: "?serverVersion=17&charset=utf8"
+      pooler: rw
+  valkey:
+    enabled: true
+  mercure:
+    enabled: true
+  meilisearch:
+    enabled: true
+  maildev:
+    enabled: true
+cnpg:
+  cluster:
+    plugins:
+      - name: barman-cloud.cloudnative-pg.io
+        isWALArchiver: true
+  backups:
+    enabled: true
+    endpointURL: https://s3.fr-par.scw.cloud
+    destinationPath: s3://backups/mon-app/
+  poolers:
+    - name: rw
+      type: rw
+      poolMode: transaction
+      instances: 1
+mercure:
+  publisherJwtKey: test-publisher
+  subscriberJwtKey: test-subscriber
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: "{{ .Release.Name }}-extra"
+    data:
+      foo: bar

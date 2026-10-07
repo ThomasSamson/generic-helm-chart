@@ -1,0 +1,14 @@
+# Environnement de staging de __APP_NAME__.
+
+env:
+  APP_ENV: prod
+  TRUSTED_HOSTS: '^__APP_NAME__\.staging\.example\.com$'
+
+httpRoutes:
+  main:
+    enabled: true
+    hostnames: [__APP_NAME__.staging.example.com]
+
+basicAuth:
+  enabled: true
+  existingSecret: __APP_NAME__-basicauth

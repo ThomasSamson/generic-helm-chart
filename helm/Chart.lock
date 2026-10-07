@@ -1,0 +1,18 @@
+dependencies:
+- name: cluster
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.9.0
+- name: valkey
+  repository: https://valkey.io/valkey-helm/
+  version: 0.12.0
+- name: mercure
+  repository: https://charts.mercure.rocks
+  version: 1.0.4
+- name: meilisearch
+  repository: https://meilisearch.github.io/meilisearch-kubernetes
+  version: 0.40.0
+- name: maildev
+  repository: https://pando85.github.io/helm-maildev/
+  version: 0.3.1
+digest: sha256:a76dacc74ba68429f912763c5d23d86f7b8cec0a6d04bf637fc7d86c2cb0a616
+generated: "2026-10-07T14:06:23.891324751+02:00"

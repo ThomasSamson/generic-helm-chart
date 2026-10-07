@@ -1,0 +1,30 @@
+{{- range $name, $spec := .Values.jobs }}
+{{- if $spec.enabled }}
+{{- $w := include "tilleuls.workload" (dict "root" $ "spec" $spec) | fromYaml }}
+{{- $hook := $w.helmHook | default dict }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  {{- if $hook.enabled }}
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+  {{- else }}
+  {{- /* Nom unique par révision : un Job est immuable, il doit être recréé à chaque release. */}}
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) | trunc 52 | trimSuffix "-" }}-{{ $.Release.Revision }}
+  {{- end }}
+  labels:
+    {{- include "tilleuls.componentLabels" (dict "root" $ "component" $name) | nindent 4 }}
+  {{- $annotations := deepCopy ($w.annotations | default dict) }}
+  {{- if $hook.enabled }}
+  {{- $_ := set $annotations "helm.sh/hook" ($hook.hooks | default "post-install,pre-upgrade") }}
+  {{- $_ := set $annotations "helm.sh/hook-weight" (($hook.weight | default 0) | toString) }}
+  {{- $_ := set $annotations "helm.sh/hook-delete-policy" ($hook.deletePolicy | default "before-hook-creation,hook-succeeded") }}
+  {{- end }}
+  {{- include "tilleuls.annotations" (dict "root" $ "annotations" $annotations) | nindent 2 }}
+spec:
+  {{- if not (hasKey $w "ttlSecondsAfterFinished") }}
+  {{- $_ := set $w "ttlSecondsAfterFinished" 86400 }}
+  {{- end }}
+  {{- include "tilleuls.jobSpec" (dict "root" $ "name" $name "w" $w) | nindent 2 }}
+{{- end }}
+{{- end }}

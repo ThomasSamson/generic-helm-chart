@@ -1,0 +1,20 @@
+Release {{ .Release.Name }} déployée dans le namespace {{ .Release.Namespace }}.
+
+Workloads :
+{{- range $name, $spec := .Values.deployments }}{{ if $spec.enabled }}
+  - Deployment {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }}
+{{- end }}{{ end }}
+{{- range $name, $spec := .Values.cronJobs }}{{ if $spec.enabled }}
+  - CronJob {{ include "tilleuls.resourceName" (dict "root" $ "suffix" $name) }} ({{ $spec.schedule }})
+{{- end }}{{ end }}
+
+{{- range $key, $ing := .Values.ingresses }}{{ if $ing.enabled }}
+URLs ({{ $key }}) :
+{{- range $ing.hosts }}
+  - http{{ if $ing.tls }}s{{ end }}://{{ tpl .host $ }}
+{{- end }}
+{{- end }}{{ end }}
+
+{{- range $addon, $cfg := .Values.addons }}{{ if $cfg.enabled }}
+Addon {{ $addon }} : {{ include "tilleuls.subchartFullname" (dict "root" $ "chart" $addon) }}
+{{- end }}{{ end }}

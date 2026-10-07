@@ -1,0 +1,14 @@
+{{- with .Values.configFiles }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tilleuls.resourceName" (dict "root" $ "suffix" "files") }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+  {{- include "tilleuls.annotations" (dict "root" $) | nindent 2 }}
+data:
+  {{- range $key, $f := . }}
+  {{ $key }}: |
+    {{- tpl $f.content $ | nindent 4 }}
+  {{- end }}
+{{- end }}
