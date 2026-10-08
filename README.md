@@ -1,4 +1,4 @@
-# Chart Helm générique Les Tilleuls
+# Chart Helm générique
 
 Repo template pour déployer n'importe quelle application conteneurisée (API Symfony/FrankenPHP,
 PWA, workers, cronjobs…) sans écrire de template Helm : **un projet ne modifie que des fichiers values**.
