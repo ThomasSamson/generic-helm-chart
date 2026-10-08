@@ -20,7 +20,9 @@ helm upgrade --install mon-app helm -n mon-app-prod \
   -f values/common.yaml -f values/prod.yaml
 ```
 
-`init.sh` renomme le chart (labels `app.kubernetes.io/name`) et remplit les fichiers `values/`.
+`init.sh` renomme le chart (labels `app.kubernetes.io/name`), remplit les fichiers `values/` et
+génère le `README.md` du projet à partir de `.template/README.md.tpl`. La présente documentation
+est déplacée dans `docs/template.md`.
 Les ressources sont nommées `<release>-<clé>` : `mon-app-app`, `mon-app-worker`,
 `mon-app-cnpg`…
 
@@ -34,6 +36,8 @@ Les ressources sont nommées `<release>-<clé>` : `mon-app-app`, `mon-app-worker
 | `helm/Chart.yaml` | Nom du chart (via `init.sh`), dépendances | Nom uniquement |
 | `values/*.yaml` | Configuration du projet, par environnement | **Oui** |
 | `scripts/` | `init.sh`, `test.sh`, `update-from-template.sh` | Non |
+| `README.md` | Doc du projet, générée par `init.sh` | Oui |
+| `docs/template.md` | Cette doc, mise à jour avec le template | Non |
 
 Comme les projets ne touchent pas aux templates, on peut les mettre à jour quand le template évolue :
 

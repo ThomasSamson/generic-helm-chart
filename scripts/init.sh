@@ -32,6 +32,16 @@ done
 
 # Version du template utilisée, pour les mises à jour ultérieures.
 git rev-parse HEAD > .template-version 2>/dev/null || echo "unknown" > .template-version
+version="$(cut -c1-7 .template-version)"
+
+# README : la doc du template passe dans docs/, le README devient celui du projet.
+mkdir -p docs
+mv README.md docs/template.md
+sed -e "s/__APP_NAME__/${name}/g" \
+    -e "s|__IMAGE_REPOSITORY__|${image:-à renseigner dans values/common.yaml}|g" \
+    -e "s/__TEMPLATE_VERSION__/${version}/g" \
+    .template/README.md.tpl > README.md
+rm -rf .template
 
 cat <<MSG
 Projet initialisé : ${name}
