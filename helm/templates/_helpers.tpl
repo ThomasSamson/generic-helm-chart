@@ -474,3 +474,76 @@ template:
 {{- define "tilleuls.noIndexName" -}}
 {{- include "tilleuls.resourceName" (dict "root" . "suffix" "noindex") }}
 {{- end }}
+
+{{/* ───────────────────────── NetworkPolicy CNPG ───────────────────────── */}}
+
+{{/* "true" si les NetworkPolicy CNPG doivent être rendues. */}}
+{{- define "tilleuls.cnpg.netpolEnabled" -}}
+{{- $np := .Values.networkPolicy }}
+{{- if and $np.enabled ($np.cnpg | default dict).enabled .Values.addons.cnpg.enabled }}true{{ end }}
+{{- end }}
+
+{{/* Sélecteur (matchLabels) des pods instance du cluster CNPG, poolers exclus. */}}
+{{- define "tilleuls.cnpg.instanceLabels" -}}
+cnpg.io/cluster: {{ include "tilleuls.subchartFullname" (dict "root" . "chart" "cnpg") }}
+cnpg.io/podRole: instance
+{{- end }}
+
+{{/* Noms des Pooler CNPG (`<cluster>-pooler-<name>`), un par ligne. */}}
+{{- define "tilleuls.cnpg.poolerNames" -}}
+{{- $cluster := include "tilleuls.subchartFullname" (dict "root" . "chart" "cnpg") }}
+{{- range (index .Values "cnpg" | default dict).poolers }}
+{{ printf "%s-pooler-%s" $cluster .name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Règle egress 5432 ajoutée à la NetworkPolicy de la release (`networkPolicy.cnpg.allowFromRelease`) :
+vers les instances, et vers les poolers s'il y en a. Renvoie une liste YAML (vide si inactive).
+*/}}
+{{- define "tilleuls.cnpg.releaseEgress" -}}
+{{- if and (include "tilleuls.cnpg.netpolEnabled" .) .Values.networkPolicy.cnpg.allowFromRelease }}
+- to:
+    - podSelector:
+        matchLabels:
+          {{- include "tilleuls.cnpg.instanceLabels" . | nindent 10 }}
+    {{- range (include "tilleuls.cnpg.poolerNames" . | trim | splitList "\n" | compact) }}
+    - podSelector:
+        matchLabels:
+          cnpg.io/poolerName: {{ . }}
+    {{- end }}
+  ports:
+    - protocol: TCP
+      port: 5432
+{{- end }}
+{{- end }}
+
+{{/* Egress DNS vers kube-dns (UDP et TCP 53). */}}
+{{- define "tilleuls.cnpg.dnsEgress" -}}
+- to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+  ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+{{- end }}
+
+{{/* Egress `networkPolicy.cnpg.egressPorts` vers 0.0.0.0/0 (API Kubernetes, S3). Vide si aucun port. */}}
+{{- define "tilleuls.cnpg.externalEgress" -}}
+{{- with .Values.networkPolicy.cnpg.egressPorts }}
+- to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+  ports:
+    {{- range . }}
+    - protocol: TCP
+      port: {{ . }}
+    {{- end }}
+{{- end }}
+{{- end }}

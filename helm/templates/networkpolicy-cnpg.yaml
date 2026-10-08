@@ -1,0 +1,118 @@
+{{- /*
+NetworkPolicy des pods CNPG (instances et poolers), rendues si networkPolicy.enabled,
+networkPolicy.cnpg.enabled et addons.cnpg.enabled : sans elles, le default-deny du
+namespace bloque PostgreSQL.
+*/ -}}
+{{- if include "tilleuls.cnpg.netpolEnabled" . }}
+{{- $cfg := .Values.networkPolicy.cnpg }}
+{{- $cluster := include "tilleuls.subchartFullname" (dict "root" $ "chart" "cnpg") }}
+{{- $poolers := include "tilleuls.cnpg.poolerNames" . | trim | splitList "\n" | compact }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ printf "%s-cnpg" $cluster | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "tilleuls.cnpg.instanceLabels" $ | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Clients : pods de la release et poolers.
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "tilleuls.selectorLabels" $ | nindent 14 }}
+        {{- range $poolers }}
+        - podSelector:
+            matchLabels:
+              cnpg.io/poolerName: {{ . }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Réplication et join entre instances.
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "tilleuls.cnpg.instanceLabels" $ | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Opérateur → instance manager (statut, promotion…).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $cfg.operatorNamespace }}
+      ports:
+        - protocol: TCP
+          port: 8000
+    {{- with $cfg.metricsNamespace }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+      ports:
+        - protocol: TCP
+          port: 9187
+    {{- end }}
+    {{- with $cfg.extraIngress }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+    {{- end }}
+  egress:
+    {{- include "tilleuls.cnpg.dnsEgress" $ | nindent 4 }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "tilleuls.cnpg.instanceLabels" $ | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- include "tilleuls.cnpg.externalEgress" $ | trim | nindent 4 }}
+    {{- with $cfg.extraEgress }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+    {{- end }}
+{{- range $poolers }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ . | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/poolerName: {{ . }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "tilleuls.selectorLabels" $ | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- with $cfg.metricsNamespace }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+      ports:
+        - protocol: TCP
+          port: 9127
+    {{- end }}
+  egress:
+    {{- include "tilleuls.cnpg.dnsEgress" $ | nindent 4 }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "tilleuls.cnpg.instanceLabels" $ | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Le pooler lit son Pooler et ses secrets via l'API Kubernetes.
+    {{- include "tilleuls.cnpg.externalEgress" $ | trim | nindent 4 }}
+{{- end }}
+{{- end }}

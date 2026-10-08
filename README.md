@@ -65,7 +65,8 @@ Toutes les options sont décrites dans [`helm/values.yaml`](helm/values.yaml).
 | HTTPRoute (Gateway API) | `httpRoutes.<nom>` | Raccourci `backend`, redirection HTTPS |
 | Basic auth (« htaccess ») | `basicAuth` | Middleware Traefik appliqué aux ingress/routes |
 | Non-indexation (hors prod) | `noIndex` | En-tête `X-Robots-Tag` ajouté par Traefik ; activé dans `values/staging.yaml` |
-| NetworkPolicy | `networkPolicy` | |
+| NetworkPolicy | `networkPolicy` | Pods de la release |
+| NetworkPolicy CNPG | `networkPolicy.cnpg` | Automatique si `networkPolicy.enabled` et `addons.cnpg.enabled` : instances (5432 depuis la release, les poolers et le cluster ; 8000 depuis l'opérateur ; 9187 si `metricsNamespace`) et poolers ; egress 5432 ajouté à la policy de la release si elle a `Egress`. Requise avec le default-deny Ingress+Egress posé par Kyverno sur nos namespaces |
 | ServiceAccount, RBAC | `serviceAccount`, `rbac` | |
 | Manifestes libres | `extraObjects` | Passent par `tpl` |
 

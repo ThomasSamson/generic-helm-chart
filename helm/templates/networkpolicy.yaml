@@ -18,7 +18,8 @@ spec:
   {{- end }}
   {{- if has "Egress" .policyTypes }}
   egress:
-    {{- tpl (toYaml (.egress | default list)) $ | nindent 4 }}
+    {{- $egress := concat (.egress | default list) (include "tilleuls.cnpg.releaseEgress" $ | fromYamlArray) }}
+    {{- tpl (toYaml $egress) $ | nindent 4 }}
   {{- end }}
 {{- end }}
 {{- end }}

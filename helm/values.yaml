@@ -352,6 +352,25 @@ networkPolicy:
   #          matchLabels:
   #            kubernetes.io/metadata.name: infra-traefik
   egress: []
+  # NetworkPolicy des pods CNPG (`<cluster>-cnpg`, plus une par pooler), rendues si
+  # `networkPolicy.enabled` et `addons.cnpg.enabled`. Indispensables avec le default-deny
+  # Ingress+Egress posé par Kyverno : sinon PostgreSQL ne démarre pas.
+  cnpg:
+    enabled: true
+    # Ajoute l'egress 5432 vers les instances (et les poolers) dans la NetworkPolicy de la
+    # release, si celle-ci a Egress dans ses `policyTypes`.
+    allowFromRelease: true
+    # Namespace de l'opérateur CNPG (opérateur → instances, port 8000).
+    operatorNamespace: cnpg-operator
+    # Namespace autorisé à scraper les métriques (9187 instances, 9127 poolers).
+    # Vide = pas de règle (ex. infra-prometheus).
+    metricsNamespace: ""
+    # Sorties des instances et poolers vers 0.0.0.0/0 : API Kubernetes (6443 après DNAT du
+    # service `kubernetes`) et S3 (sauvegardes, 443).
+    egressPorts: [443, 6443]
+    # Règles supplémentaires (format Kubernetes, passent par `tpl`) pour les instances.
+    extraIngress: []
+    extraEgress: []
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Dépendances (sous-charts)
