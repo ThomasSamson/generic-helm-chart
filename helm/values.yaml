@@ -291,7 +291,7 @@ httpRoutes:
     annotations: {}
     parentRefs:
       - name: gateway
-        namespace: infra-gateway
+        namespace: infra-traefik
         sectionName: https
     hostnames: []
     #  - app.example.com
