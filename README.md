@@ -22,7 +22,8 @@ helm upgrade --install mon-app helm -n mon-app-prod \
 
 `init.sh` renomme le chart (labels `app.kubernetes.io/name`), remplit les fichiers `values/` et
 génère le `README.md` du projet à partir de `.template/README.md.tpl`. La présente documentation
-est déplacée dans `docs/template.md`.
+est déplacée dans `docs/template.md`. Il installe aussi la config Dependabot du projet
+(voir [Dependabot](#dependabot) ; `--no-dependabot` pour s'en passer).
 Les ressources sont nommées `<release>-<clé>` : `mon-app-app`, `mon-app-worker`,
 `mon-app-cnpg`…
 
@@ -38,6 +39,7 @@ Les ressources sont nommées `<release>-<clé>` : `mon-app-app`, `mon-app-worker
 | `scripts/` | `init.sh`, `test.sh`, `update-from-template.sh` | Non |
 | `README.md` | Doc du projet, générée par `init.sh` | Oui |
 | `docs/template.md` | Cette doc, mise à jour avec le template | Non |
+| `.github/dependabot.yml` | Config Dependabot du projet, installée par `init.sh` | Oui |
 
 Comme les projets ne touchent pas aux templates, on peut les mettre à jour quand le template évolue :
 
@@ -48,6 +50,22 @@ git diff && ./scripts/test.sh
 
 Une fonctionnalité qui manque doit être ajoutée **dans le template**, pas dans le projet.
 En attendant, `extraObjects` permet d'ajouter n'importe quel manifeste.
+
+### Dependabot
+
+Chaque repo ne met à jour que les fichiers qu'il possède :
+
+| Repo | Config | Ce qui est mis à jour |
+|---|---|---|
+| Template | `.github/dependabot.yml` | Sous-charts de `helm/Chart.yaml` (groupés en une PR), GitHub Actions |
+| Projet | `.template/dependabot.yml`, copiée dans `.github/` par `init.sh` | Images tierces de `values/*.yaml`, GitHub Actions |
+
+Les sous-charts ne sont **pas** suivis dans les projets : `update-from-template.sh` remplace
+`helm/Chart.yaml` et `Chart.lock`, et écraserait les PR de Dependabot. Une montée de version se fait
+donc dans le template, puis les projets la récupèrent avec `update-from-template.sh`.
+
+Dependabot ne peut pas mettre à jour un tag `latest` : seules les images en version précise sont
+suivies. Pour un registre privé, voir le commentaire en fin de la config projet.
 
 ## Fonctionnalités
 

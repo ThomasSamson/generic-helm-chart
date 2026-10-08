@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 # Initialise un projet client à partir du template.
-# Usage : ./scripts/init.sh <nom-app> [repository-image]
+# Usage : ./scripts/init.sh [--no-dependabot] <nom-app> [repository-image]
 #   ./scripts/init.sh mon-app registry.example.com/mon-app/api
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-name="${1:-}"
-image="${2:-}"
+dependabot=true
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --no-dependabot) dependabot=false ;;
+    -*) echo "Option inconnue : $arg" >&2; exit 1 ;;
+    *) args+=("$arg") ;;
+  esac
+done
+
+name="${args[0]:-}"
+image="${args[1]:-}"
 
 if [[ ! "$name" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]] || (( ${#name} > 40 )); then
   echo "Nom invalide : '$name' (minuscules, chiffres et tirets, 40 caractères max)." >&2
@@ -41,6 +51,14 @@ sed -e "s/__APP_NAME__/${name}/g" \
     -e "s|__IMAGE_REPOSITORY__|${image:-à renseigner dans values/common.yaml}|g" \
     -e "s/__TEMPLATE_VERSION__/${version}/g" \
     .template/README.md.tpl > README.md
+
+# Dependabot : la config du template (sous-charts) est remplacée par celle du projet
+# (images de values/, GitHub Actions), ou supprimée avec --no-dependabot.
+if [[ "$dependabot" == true ]]; then
+  cp .template/dependabot.yml .github/dependabot.yml
+else
+  rm -f .github/dependabot.yml
+fi
 rm -rf .template
 
 cat <<MSG

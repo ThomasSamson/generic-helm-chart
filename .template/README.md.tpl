@@ -45,3 +45,12 @@ Avant chaque modification, validez le rendu :
 ./scripts/update-from-template.sh   # ou une ref précise : ./scripts/update-from-template.sh v1.2.0
 git diff && ./scripts/test.sh
 ```
+
+Les sous-charts (PostgreSQL, Valkey…) sont mis à jour dans le template : c'est cette commande
+qui les récupère.
+
+## Dependabot
+
+`.github/dependabot.yml` suit les images tierces de `values/*.yaml` (en version précise, pas
+`latest`) et les GitHub Actions. N'y ajoutez pas l'écosystème `helm` : `helm/Chart.yaml` vient du
+template (voir [`docs/template.md`](docs/template.md#dependabot)).

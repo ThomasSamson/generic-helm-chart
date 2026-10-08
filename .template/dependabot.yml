@@ -1,0 +1,25 @@
+# Dependabot du projet : uniquement ce qui appartient au projet.
+# Les sous-charts (helm/Chart.yaml) sont mis à jour dans le template, puis récupérés
+# via ./scripts/update-from-template.sh : ne pas ajouter l'écosystème helm sur /helm ici,
+# ses PR seraient écrasées à la mise à jour suivante.
+version: 2
+updates:
+  # Images tierces référencées dans values/*.yaml (tag en version précise, pas « latest »)
+  - package-ecosystem: docker
+    directory: /values
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+# Registre privé : déclarer les identifiants dans les secrets Dependabot du repo, puis
+# registries:
+#   scaleway:
+#     type: docker-registry
+#     url: rg.fr-par.scw.cloud
+#     username: nologin
+#     password: ${{secrets.SCW_SECRET_KEY}}
+# et ajouter « registries: [scaleway] » à l'entrée docker.
