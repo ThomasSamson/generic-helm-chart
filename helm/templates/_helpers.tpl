@@ -489,6 +489,19 @@ cnpg.io/cluster: {{ include "tilleuls.subchartFullname" (dict "root" . "chart" "
 cnpg.io/podRole: instance
 {{- end }}
 
+{{/*
+Sélecteur (matchLabels + matchExpressions) des pods du cluster CNPG hors poolers : instances et
+jobs (initdb, join, snapshot-recovery…), qui portent `cnpg.io/jobRole` au lieu de `cnpg.io/podRole`.
+*/}}
+{{- define "tilleuls.cnpg.clusterPodSelector" -}}
+matchLabels:
+  cnpg.io/cluster: {{ include "tilleuls.subchartFullname" (dict "root" . "chart" "cnpg") }}
+matchExpressions:
+  - key: cnpg.io/podRole
+    operator: NotIn
+    values: [pooler]
+{{- end }}
+
 {{/* Noms des Pooler CNPG (`<cluster>-pooler-<name>`), un par ligne. */}}
 {{- define "tilleuls.cnpg.poolerNames" -}}
 {{- $cluster := include "tilleuls.subchartFullname" (dict "root" . "chart" "cnpg") }}

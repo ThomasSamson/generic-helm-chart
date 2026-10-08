@@ -1,5 +1,5 @@
 {{- /*
-NetworkPolicy des pods CNPG (instances et poolers), rendues si networkPolicy.enabled,
+NetworkPolicy des pods CNPG (instances, jobs et poolers), rendues si networkPolicy.enabled,
 networkPolicy.cnpg.enabled et addons.cnpg.enabled : sans elles, le default-deny du
 namespace bloque PostgreSQL.
 */ -}}
@@ -15,8 +15,7 @@ metadata:
     {{- include "tilleuls.labels" $ | nindent 4 }}
 spec:
   podSelector:
-    matchLabels:
-      {{- include "tilleuls.cnpg.instanceLabels" $ | nindent 6 }}
+    {{- include "tilleuls.cnpg.clusterPodSelector" $ | nindent 4 }}
   policyTypes: [Ingress, Egress]
   ingress:
     # Clients : pods de la release et poolers.
@@ -32,11 +31,10 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
-    # Réplication et join entre instances.
+    # Réplication et join entre instances (jobs join inclus).
     - from:
         - podSelector:
-            matchLabels:
-              {{- include "tilleuls.cnpg.instanceLabels" $ | nindent 14 }}
+            {{- include "tilleuls.cnpg.clusterPodSelector" $ | nindent 12 }}
       ports:
         - protocol: TCP
           port: 5432
