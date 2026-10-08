@@ -103,7 +103,7 @@ Les variables de connexion sont injectées automatiquement dans tous les workloa
 | `valkey` | [valkey-io/valkey-helm](https://github.com/valkey-io/valkey-helm) | `REDIS_URL` |
 | `mercure` | [dunglas/mercure](https://github.com/dunglas/mercure/tree/main/charts/mercure) | `MERCURE_URL`, `MERCURE_JWT_SECRET` |
 | `meilisearch` | [meilisearch-kubernetes](https://github.com/meilisearch/meilisearch-kubernetes) | `MEILISEARCH_URL` |
-| `maildev` | [pando85/helm-maildev](https://github.com/pando85/helm-maildev) | `MAILER_DSN` |
+| `maildev` | [ThomasSamson/helm-maildev](https://github.com/ThomasSamson/helm-maildev) | `MAILER_DSN` |
 
 > Pourquoi `addons.mercure.enabled` et pas `mercure.enabled` ? Le sous-chart mercure a un schéma
 > JSON strict qui refuse toute clé inconnue. Toutes les dépendances suivent donc la même règle.

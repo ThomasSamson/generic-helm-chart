@@ -232,6 +232,14 @@ cnpg:
       type: rw
       poolMode: transaction
       instances: 1
+maildev:
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: traefik-gateway
+        namespace: traefik
+    hostnames:
+      - maildev.example.com
 mercure:
   publisherJwtKey: test-publisher
   subscriberJwtKey: test-subscriber

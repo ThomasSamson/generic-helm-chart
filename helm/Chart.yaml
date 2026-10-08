@@ -38,6 +38,6 @@ dependencies:
     repository: https://meilisearch.github.io/meilisearch-kubernetes
     condition: addons.meilisearch.enabled
   - name: maildev
-    version: 0.3.1
-    repository: https://pando85.github.io/helm-maildev/
+    version: 0.5.0
+    repository: https://thomassamson.github.io/helm-maildev/
     condition: addons.maildev.enabled
