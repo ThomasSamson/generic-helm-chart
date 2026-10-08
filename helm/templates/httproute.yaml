@@ -27,6 +27,10 @@ spec:
     {{- $filter := dict "type" "ExtensionRef" "extensionRef" (dict "group" "traefik.io" "kind" "Middleware" "name" (include "tilleuls.basicAuthName" $)) }}
     {{- $_ := set $rule "filters" (prepend ($rule.filters | default list) $filter) }}
     {{- end }}
+    {{- if $.Values.noIndex.enabled }}
+    {{- $filter := dict "type" "ExtensionRef" "extensionRef" (dict "group" "traefik.io" "kind" "Middleware" "name" (include "tilleuls.noIndexName" $)) }}
+    {{- $_ := set $rule "filters" (prepend ($rule.filters | default list) $filter) }}
+    {{- end }}
     - {{- tpl (toYaml $rule) $ | nindent 6 }}
     {{- end }}
 {{- with $route.httpsRedirect }}

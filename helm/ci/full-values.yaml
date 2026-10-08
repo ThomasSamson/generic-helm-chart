@@ -131,6 +131,7 @@ ingresses:
     className: traefik
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-prod
+      traefik.ingress.kubernetes.io/router.middlewares: infra-traefik-compress@kubernetescrd
     hosts:
       - host: "{{ .Release.Name }}.example.com"
         paths:
@@ -172,6 +173,8 @@ basicAuth:
   realm: Recette
   users:
     - "admin:$2y$05$abcdefghijklmnopqrstuuJ6bQ3x8Q4b8jzYc8m1Hq0QWm0n5c2C6"
+noIndex:
+  enabled: true
 networkPolicy:
   enabled: true
   ingress:

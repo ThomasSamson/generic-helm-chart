@@ -332,6 +332,15 @@ basicAuth:
   # -- Retire l'en-tête Authorization avant de transmettre la requête à l'application.
   removeHeader: true
 
+# Interdit l'indexation par les moteurs de recherche (environnements hors production)
+# via un Middleware Traefik qui ajoute l'en-tête `X-Robots-Tag` à toutes les réponses
+# des ingresses et httpRoutes activés.
+noIndex:
+  # -- Active l'en-tête `X-Robots-Tag`.
+  enabled: false
+  # -- Valeur de l'en-tête.
+  value: "noindex, nofollow"
+
 # -- NetworkPolicy appliquée à tous les pods de la release.
 networkPolicy:
   enabled: false

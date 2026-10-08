@@ -470,3 +470,7 @@ template:
 {{- define "tilleuls.basicAuthName" -}}
 {{- include "tilleuls.resourceName" (dict "root" . "suffix" "basicauth") }}
 {{- end }}
+
+{{- define "tilleuls.noIndexName" -}}
+{{- include "tilleuls.resourceName" (dict "root" . "suffix" "noindex") }}
+{{- end }}

@@ -1,0 +1,14 @@
+{{- with .Values.noIndex }}
+{{- if .enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "tilleuls.noIndexName" $ }}
+  labels:
+    {{- include "tilleuls.labels" $ | nindent 4 }}
+spec:
+  headers:
+    customResponseHeaders:
+      X-Robots-Tag: {{ .value | quote }}
+{{- end }}
+{{- end }}

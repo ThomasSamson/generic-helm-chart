@@ -1,10 +1,18 @@
 {{- range $key, $ing := .Values.ingresses }}
 {{- if $ing.enabled }}
 {{- $annotations := deepCopy ($ing.annotations | default dict) }}
+{{- $mws := list }}
+{{- if $.Values.noIndex.enabled }}
+{{- $mws = append $mws (printf "%s-%s@kubernetescrd" $.Release.Namespace (include "tilleuls.noIndexName" $)) }}
+{{- end }}
 {{- if and $.Values.basicAuth.enabled (ne $ing.basicAuth false) }}
-{{- $mw := printf "%s-%s@kubernetescrd" $.Release.Namespace (include "tilleuls.basicAuthName" $) }}
-{{- $existing := get $annotations "traefik.ingress.kubernetes.io/router.middlewares" }}
-{{- $_ := set $annotations "traefik.ingress.kubernetes.io/router.middlewares" (ternary (printf "%s,%s" $mw $existing) $mw (not (empty $existing))) }}
+{{- $mws = append $mws (printf "%s-%s@kubernetescrd" $.Release.Namespace (include "tilleuls.basicAuthName" $)) }}
+{{- end }}
+{{- with get $annotations "traefik.ingress.kubernetes.io/router.middlewares" }}
+{{- $mws = append $mws . }}
+{{- end }}
+{{- with $mws }}
+{{- $_ := set $annotations "traefik.ingress.kubernetes.io/router.middlewares" (join "," .) }}
 {{- end }}
 ---
 apiVersion: networking.k8s.io/v1

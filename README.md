@@ -64,6 +64,7 @@ Toutes les options sont décrites dans [`helm/values.yaml`](helm/values.yaml).
 | Ingress | `ingresses.<nom>` | Plusieurs ingress possibles |
 | HTTPRoute (Gateway API) | `httpRoutes.<nom>` | Raccourci `backend`, redirection HTTPS |
 | Basic auth (« htaccess ») | `basicAuth` | Middleware Traefik appliqué aux ingress/routes |
+| Non-indexation (hors prod) | `noIndex` | En-tête `X-Robots-Tag` ajouté par Traefik ; activé dans `values/staging.yaml` |
 | NetworkPolicy | `networkPolicy` | |
 | ServiceAccount, RBAC | `serviceAccount`, `rbac` | |
 | Manifestes libres | `extraObjects` | Passent par `tpl` |

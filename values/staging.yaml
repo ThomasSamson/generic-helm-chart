@@ -9,6 +9,9 @@ httpRoutes:
     enabled: true
     hostnames: [__APP_NAME__.staging.example.com]
 
+noIndex:
+  enabled: true
+
 basicAuth:
   enabled: true
   existingSecret: __APP_NAME__-basicauth
