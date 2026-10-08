@@ -290,7 +290,7 @@ httpRoutes:
     enabled: false
     annotations: {}
     parentRefs:
-      - name: gateway
+      - name: traefik
         namespace: infra-traefik
         sectionName: https
     hostnames: []
