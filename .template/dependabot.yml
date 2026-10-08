@@ -1,9 +1,18 @@
-# Dependabot du projet : uniquement ce qui appartient au projet.
-# Les sous-charts (helm/Chart.yaml) sont mis à jour dans le template, puis récupérés
-# via ./scripts/update-from-template.sh : ne pas ajouter l'écosystème helm sur /helm ici,
-# ses PR seraient écrasées à la mise à jour suivante.
+# Dependabot du projet.
+# Les sous-charts de helm/Chart.yaml sont aussi suivis dans le template : les versions
+# convergent. Lors d'un ./scripts/update-from-template.sh, vérifier dans le diff que
+# Chart.yaml / Chart.lock ne reviennent pas à une version plus ancienne.
 version: 2
 updates:
+  # Sous-charts déclarés dans helm/Chart.yaml (+ Chart.lock)
+  - package-ecosystem: helm
+    directory: /helm
+    schedule:
+      interval: weekly
+    groups:
+      subcharts:
+        patterns: ["*"]
+
   # Images tierces référencées dans values/*.yaml (tag en version précise, pas « latest »)
   - package-ecosystem: docker
     directory: /values

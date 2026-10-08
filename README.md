@@ -53,16 +53,15 @@ En attendant, `extraObjects` permet d'ajouter n'importe quel manifeste.
 
 ### Dependabot
 
-Chaque repo ne met à jour que les fichiers qu'il possède :
-
 | Repo | Config | Ce qui est mis à jour |
 |---|---|---|
-| Template | `.github/dependabot.yml` | Sous-charts de `helm/Chart.yaml` (groupés en une PR), GitHub Actions |
-| Projet | `.template/dependabot.yml`, copiée dans `.github/` par `init.sh` | Images tierces de `values/*.yaml`, GitHub Actions |
+| Template | `.github/dependabot.yml` | Sous-charts de `helm/Chart.yaml`, GitHub Actions |
+| Projet | `.template/dependabot.yml`, copiée dans `.github/` par `init.sh` | Sous-charts de `helm/Chart.yaml`, images tierces de `values/*.yaml`, GitHub Actions |
 
-Les sous-charts ne sont **pas** suivis dans les projets : `update-from-template.sh` remplace
-`helm/Chart.yaml` et `Chart.lock`, et écraserait les PR de Dependabot. Une montée de version se fait
-donc dans le template, puis les projets la récupèrent avec `update-from-template.sh`.
+Les montées de version des sous-charts sont regroupées en une seule PR. Comme le template et les
+projets les suivent tous les deux, leurs versions convergent. Lors d'un `update-from-template.sh`,
+vérifier tout de même dans le diff que `Chart.yaml` et `Chart.lock` ne reviennent pas à une version
+plus ancienne (projet en avance sur le template).
 
 Dependabot ne peut pas mettre à jour un tag `latest` : seules les images en version précise sont
 suivies. Pour un registre privé, voir le commentaire en fin de la config projet.

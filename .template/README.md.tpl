@@ -46,11 +46,11 @@ Avant chaque modification, validez le rendu :
 git diff && ./scripts/test.sh
 ```
 
-Les sous-charts (PostgreSQL, Valkey…) sont mis à jour dans le template : c'est cette commande
-qui les récupère.
+Dans le diff, vérifier que `helm/Chart.yaml` et `Chart.lock` ne reviennent pas à une version
+de sous-chart plus ancienne que celle montée par Dependabot dans ce projet.
 
 ## Dependabot
 
-`.github/dependabot.yml` suit les images tierces de `values/*.yaml` (en version précise, pas
-`latest`) et les GitHub Actions. N'y ajoutez pas l'écosystème `helm` : `helm/Chart.yaml` vient du
-template (voir [`docs/template.md`](docs/template.md#dependabot)).
+`.github/dependabot.yml` suit les sous-charts de `helm/Chart.yaml`, les images tierces de
+`values/*.yaml` (en version précise, pas `latest`) et les GitHub Actions
+(voir [`docs/template.md`](docs/template.md#dependabot)).
