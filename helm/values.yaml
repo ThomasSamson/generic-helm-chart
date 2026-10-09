@@ -290,7 +290,7 @@ httpRoutes:
     enabled: false
     annotations: {}
     parentRefs:
-      - name: gateway
+      - name: traefik
         namespace: infra-traefik
         sectionName: https
     hostnames: []
@@ -487,7 +487,8 @@ mercure: {}
 # -- Configuration du sous-chart meilisearch (https://github.com/meilisearch/meilisearch-kubernetes).
 meilisearch: {}
 
-# -- Configuration du sous-chart maildev (https://github.com/pando85/helm-maildev).
+# -- Configuration du sous-chart maildev (https://github.com/ThomasSamson/helm-maildev) :
+# MailDev 3, interface web exposable par `maildev.httpRoute` ou `maildev.ingress`.
 maildev: {}
 
 # -- Manifestes supplémentaires (passent par `tpl`) : Middleware Traefik, ExternalSecret,

@@ -6,6 +6,9 @@
 # Usage : ./scripts/update-from-template.sh [ref]   (défaut : main)
 set -euo pipefail
 
+# Le script se remplace lui-même (cp scripts/*.sh) : le bloc { … exit; } est lu en entier
+# par bash avant d'être exécuté, sinon la suite serait lue dans le nouveau fichier.
+{
 cd "$(dirname "$0")/.."
 
 TEMPLATE_REPO="${TEMPLATE_REPO:-https://github.com/ThomasSamson/generic-helm-chart.git}"
@@ -28,3 +31,5 @@ sed "s/^name: generic-app$/name: ${name}/" "$tmp/helm/Chart.yaml" > helm/Chart.y
 git -C "$tmp" rev-parse HEAD > .template-version
 
 echo "Template mis à jour ($(cat .template-version)). Vérifier le diff puis lancer ./scripts/test.sh"
+exit 0
+}

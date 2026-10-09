@@ -12,7 +12,7 @@ dependencies:
   repository: https://meilisearch.github.io/meilisearch-kubernetes
   version: 0.40.0
 - name: maildev
-  repository: https://pando85.github.io/helm-maildev/
-  version: 0.3.1
-digest: sha256:a76dacc74ba68429f912763c5d23d86f7b8cec0a6d04bf637fc7d86c2cb0a616
-generated: "2026-10-07T14:06:23.891324751+02:00"
+  repository: https://thomassamson.github.io/helm-maildev/
+  version: 0.5.0
+digest: sha256:87c620e2674693fce36e030a3487b380e2d4974e34c30c56c67e425204824d20
+generated: "2026-10-08T15:36:19.74270973+02:00"

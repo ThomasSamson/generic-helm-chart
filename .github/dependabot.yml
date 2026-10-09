@@ -1,5 +1,5 @@
-# Dependabot du template : uniquement ce qui appartient au template.
-# Les projets récupèrent ces montées de version via ./scripts/update-from-template.sh.
+# Dependabot du template.
+# Les projets ont leur propre Dependabot, qui suit aussi les sous-charts.
 # La config des projets générés est dans .template/dependabot.yml (installée par init.sh).
 version: 2
 updates:

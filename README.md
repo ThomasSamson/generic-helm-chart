@@ -1,4 +1,4 @@
-# Chart Helm générique Les Tilleuls
+# Chart Helm générique
 
 Repo template pour déployer n'importe quelle application conteneurisée (API Symfony/FrankenPHP,
 PWA, workers, cronjobs…) sans écrire de template Helm : **un projet ne modifie que des fichiers values**.
@@ -53,16 +53,15 @@ En attendant, `extraObjects` permet d'ajouter n'importe quel manifeste.
 
 ### Dependabot
 
-Chaque repo ne met à jour que les fichiers qu'il possède :
-
 | Repo | Config | Ce qui est mis à jour |
 |---|---|---|
-| Template | `.github/dependabot.yml` | Sous-charts de `helm/Chart.yaml` (groupés en une PR), GitHub Actions |
-| Projet | `.template/dependabot.yml`, copiée dans `.github/` par `init.sh` | Images tierces de `values/*.yaml`, GitHub Actions |
+| Template | `.github/dependabot.yml` | Sous-charts de `helm/Chart.yaml`, GitHub Actions |
+| Projet | `.template/dependabot.yml`, copiée dans `.github/` par `init.sh` | Sous-charts de `helm/Chart.yaml`, images tierces de `values/*.yaml`, GitHub Actions |
 
-Les sous-charts ne sont **pas** suivis dans les projets : `update-from-template.sh` remplace
-`helm/Chart.yaml` et `Chart.lock`, et écraserait les PR de Dependabot. Une montée de version se fait
-donc dans le template, puis les projets la récupèrent avec `update-from-template.sh`.
+Les montées de version des sous-charts sont regroupées en une seule PR. Comme le template et les
+projets les suivent tous les deux, leurs versions convergent. Lors d'un `update-from-template.sh`,
+vérifier tout de même dans le diff que `Chart.yaml` et `Chart.lock` ne reviennent pas à une version
+plus ancienne (projet en avance sur le template).
 
 Dependabot ne peut pas mettre à jour un tag `latest` : seules les images en version précise sont
 suivies. Pour un registre privé, voir le commentaire en fin de la config projet.
@@ -104,7 +103,7 @@ Les variables de connexion sont injectées automatiquement dans tous les workloa
 | `valkey` | [valkey-io/valkey-helm](https://github.com/valkey-io/valkey-helm) | `REDIS_URL` |
 | `mercure` | [dunglas/mercure](https://github.com/dunglas/mercure/tree/main/charts/mercure) | `MERCURE_URL`, `MERCURE_JWT_SECRET` |
 | `meilisearch` | [meilisearch-kubernetes](https://github.com/meilisearch/meilisearch-kubernetes) | `MEILISEARCH_URL` |
-| `maildev` | [pando85/helm-maildev](https://github.com/pando85/helm-maildev) | `MAILER_DSN` |
+| `maildev` | [ThomasSamson/helm-maildev](https://github.com/ThomasSamson/helm-maildev) | `MAILER_DSN` |
 
 > Pourquoi `addons.mercure.enabled` et pas `mercure.enabled` ? Le sous-chart mercure a un schéma
 > JSON strict qui refuse toute clé inconnue. Toutes les dépendances suivent donc la même règle.
